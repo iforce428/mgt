@@ -166,6 +166,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Handle delete action
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete') {
+    try {
+        // Check if the item has any orders
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) as order_count 
+            FROM order_items 
+            WHERE item_id = ?
+        ");
+        $stmt->execute([$_POST['item_id']]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result['order_count'] > 0) {
+            $error_message = 'Menu ini tidak boleh dipadam kerana ia mempunyai pesanan.';
+        } else {
+            // Get the image URL before deleting
+            $stmt = $pdo->prepare("SELECT image_url FROM menu_items WHERE item_id = ?");
+            $stmt->execute([$_POST['item_id']]);
+            $item = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Start transaction
+            $pdo->beginTransaction();
+
+            // Delete the menu item
+            $stmt = $pdo->prepare("DELETE FROM menu_items WHERE item_id = ?");
+            $stmt->execute([$_POST['item_id']]);
+
+            // Delete the image file if it exists
+            if (!empty($item['image_url'])) {
+                $image_path = parse_url($item['image_url'], PHP_URL_PATH);
+                $file_path = $_SERVER['DOCUMENT_ROOT'] . $image_path;
+                if (file_exists($file_path)) {
+                    unlink($file_path);
+                }
+            }
+
+            $pdo->commit();
+            $success_message = 'Menu berjaya dipadam.';
+        }
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $error_message = 'Ralat semasa memadam menu: ' . $e->getMessage();
+    }
+}
+
 // Fetch categories
 $stmt = $pdo->prepare("SELECT DISTINCT category FROM menu_items ORDER BY category");
 $stmt->execute();
@@ -321,26 +366,19 @@ $menu_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         <?php echo number_format($menu_item['total_quantity']); ?> unit
                                     </small>
                                 </td>
-                                <td>
-                                    <button type="button" 
-                                            class="btn btn-sm btn-outline-warning"
-                                            onclick='editItem(<?php echo json_encode([
-                                                "item_id" => $menu_item["item_id"],
-                                                "name" => $menu_item["name"],
-                                                "description" => $menu_item["description"],
-                                                "category" => $menu_item["category"],
-                                                "subcategory" => $menu_item["subcategory"],
-                                                "price_per_pax" => $menu_item["price_per_pax"],
-                                                "min_pax" => $menu_item["min_pax"],
-                                                "max_pax" => $menu_item["max_pax"],
-                                                "serving_methods" => $menu_item["serving_methods"],
-                                                "event_types" => $menu_item["event_types"],
-                                                "meal_tags" => $menu_item["meal_tags"],
-                                                "image_url" => $menu_item["image_url"],
-                                                "is_available" => $menu_item["is_available"]
-                                            ]); ?>)'>
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
+                                <td class="text-end">
+                                    <div class="btn-group">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-warning" 
+                                                onclick="editItem(<?php echo htmlspecialchars(json_encode($menu_item)); ?>)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-danger" 
+                                                onclick="confirmDelete(<?php echo $menu_item['item_id']; ?>, '<?php echo escape($menu_item['name']); ?>')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -665,6 +703,19 @@ document.addEventListener('DOMContentLoaded', function() {
         previewImage(this);
     });
 });
+
+function confirmDelete(itemId, itemName) {
+    if (confirm('Adakah anda pasti mahu memadam menu "' + itemName + '"?')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.innerHTML = `
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="item_id" value="${itemId}">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
 </script>
 
 <?php require_once __DIR__ . '/../../src/includes/footer.php'; ?> 

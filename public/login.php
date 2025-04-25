@@ -105,7 +105,7 @@ require_once __DIR__ . '/../src/includes/header.php';
 
                         <p class="text-center mb-0 small">
                             Tiada akaun? 
-                            <a href="<?php echo public_url('register.php'); ?>" class="text-decoration-none fw-bold">
+                            <a href="<?php echo public_url('public/register.php'); ?>" class="text-decoration-none fw-bold">
                                 Daftar Sekarang
                             </a>
                         </p>

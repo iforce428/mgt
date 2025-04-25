@@ -1,8 +1,22 @@
 <?php
-function handle_image_upload($file, $target_dir = 'uploads/') {
+function handle_image_upload($file, $target_dir = null) {
+    // Set default upload directory if not specified
+    if ($target_dir === null) {
+        $target_dir = dirname(dirname(__DIR__)) . '/uploads/';
+    }
+
     // Create uploads directory if it doesn't exist
     if (!file_exists($target_dir)) {
-        mkdir($target_dir, 0777, true);
+        if (!mkdir($target_dir, 0777, true)) {
+            throw new Exception('Failed to create upload directory');
+        }
+        // Create .htaccess to protect uploads directory
+        $htaccess_content = "Options -Indexes\n";
+        $htaccess_content .= "<FilesMatch '\.(php|php3|php4|php5|php7|phtml|phar)$'>\n";
+        $htaccess_content .= "Order Deny,Allow\n";
+        $htaccess_content .= "Deny from all\n";
+        $htaccess_content .= "</FilesMatch>\n";
+        file_put_contents($target_dir . '.htaccess', $htaccess_content);
     }
 
     // Validate file
@@ -59,7 +73,10 @@ function handle_image_upload($file, $target_dir = 'uploads/') {
         throw new Exception('Failed to move uploaded file');
     }
 
-    // Return the relative path to the uploaded file
-    return $target_path;
+    // Get the base URL from server variables
+    $base_url = 'http://localhost/mgt/';
+
+    // Return the full URL path for the uploaded file
+    return $base_url . 'uploads/' . $filename;
 }
 ?> 

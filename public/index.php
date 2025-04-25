@@ -10,138 +10,170 @@ $page_title = 'Armaya Enterprise - Catering Services';
 require_once __DIR__ . '/../src/includes/header.php';
 ?>
 
-<!-- Hero Section -->
-<section class="hero bg-light py-5">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-lg-6">
-                <h1 class="display-4 fw-bold mb-3">Perkhidmatan Katering Berkualiti</h1>
-                <p class="lead mb-4">Kami menyediakan perkhidmatan katering untuk pelbagai majlis dengan menu yang lazat dan perkhidmatan yang profesional.</p>
-                <?php if (!$is_logged_in): ?>
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-start">
-                        <a href="<?php echo get_public_url('register.php'); ?>" class="btn btn-warning btn-lg px-4 me-md-2">Daftar Sekarang</a>
-                        <a href="<?php echo get_public_url('menu.php'); ?>" class="btn btn-outline-secondary btn-lg px-4">Lihat Menu</a>
-                    </div>
-                <?php else: ?>
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-start">
-                        <a href="<?php echo get_public_url('order.php'); ?>" class="btn btn-warning btn-lg px-4 me-md-2">Buat Pesanan</a>
-                        <a href="<?php echo get_public_url('menu.php'); ?>" class="btn btn-outline-secondary btn-lg px-4">Lihat Menu</a>
-                    </div>
-                <?php endif; ?>
-            </div>
-            <div class="col-lg-6">
-                <img src="<?php echo get_public_url('images/hero-image.jpg'); ?>" alt="Katering Armaya Enterprise" class="img-fluid rounded-3 shadow">
+<div class="container-fluid p-0">
+    <!-- Hero Section -->
+    <div class="position-relative">
+        <img src="images/hero-background.jpg" alt="Catering Background" class="w-100" style="height: 60vh; object-fit: cover; background-color: #f8f9fa;">
+        <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(0,0,0,0.5);">
+            <div class="text-center text-white">
+                <h1 class="display-4 fw-bold mb-4">Armaya Catering</h1>
+                <p class="lead mb-4">Serving delicious food for your special occasions</p>
+                <a href="menu.php" class="btn btn-warning btn-lg">View Menu</a>
             </div>
         </div>
     </div>
-</section>
 
-<!-- About Section -->
-<section id="about" class="py-5">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-8 text-center">
-                <h2 class="fw-bold mb-4">Mengenai Kami</h2>
-                <p class="lead mb-4">Armaya Enterprise telah beroperasi sejak tahun 2015, menyediakan perkhidmatan katering yang berkualiti tinggi untuk pelbagai majlis dan acara.</p>
-                <div class="row g-4 py-4">
-                    <div class="col-md-4">
-                        <div class="text-warning mb-2">
-                            <i class="bi bi-star-fill display-6"></i>
-                        </div>
-                        <h5 class="fw-bold">Kualiti Terjamin</h5>
-                        <p>Kami menggunakan bahan-bahan segar dan berkualiti tinggi</p>
+    <!-- Features Section -->
+    <div class="container py-5">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-egg-fried display-4 text-warning mb-3"></i>
+                        <h3 class="h5 fw-bold">Quality Food</h3>
+                        <p class="text-muted">We use only the freshest ingredients to prepare our delicious meals.</p>
                     </div>
-                    <div class="col-md-4">
-                        <div class="text-warning mb-2">
-                            <i class="bi bi-clock-fill display-6"></i>
-                        </div>
-                        <h5 class="fw-bold">Tepat Masa</h5>
-                        <p>Penghantaran makanan tepat pada masanya</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-truck display-4 text-warning mb-3"></i>
+                        <h3 class="h5 fw-bold">Delivery Service</h3>
+                        <p class="text-muted">We deliver to your location with care and punctuality.</p>
                     </div>
-                    <div class="col-md-4">
-                        <div class="text-warning mb-2">
-                            <i class="bi bi-heart-fill display-6"></i>
-                        </div>
-                        <h5 class="fw-bold">Perkhidmatan Mesra</h5>
-                        <p>Staf yang profesional dan mesra pelanggan</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-calendar-check display-4 text-warning mb-3"></i>
+                        <h3 class="h5 fw-bold">Easy Booking</h3>
+                        <p class="text-muted">Simple online booking system for your convenience.</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</section>
 
-<!-- Reviews Section -->
-<section id="reviews" class="py-5 bg-light">
-    <div class="container">
-        <h2 class="text-center fw-bold mb-5">Ulasan Pelanggan</h2>
+    <!-- Popular Menu Items -->
+    <div class="bg-light py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">Popular Menu Items</h2>
+            <div class="row g-4">
+                <?php
+                // Fetch popular menu items
+                try {
+                    $stmt = $conn->prepare("
+                        SELECT * FROM menu_items 
+                        WHERE is_available = 1
+                        ORDER BY item_id 
+                        LIMIT 3
+                    ");
+                    $stmt->execute();
+                    $popular_items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+                    if (!empty($popular_items)) {
+                        foreach ($popular_items as $item):
+                        ?>
+                        <div class="col-md-4">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <?php if (!empty($item['image_url'])): ?>
+                                    <img src="<?php echo htmlspecialchars($item['image_url']); ?>" 
+                                        class="card-img-top" 
+                                        alt="<?php echo htmlspecialchars($item['name']); ?>"
+                                        style="height: 200px; object-fit: cover;">
+                                <?php else: ?>
+                                    <div class="card-img-top bg-secondary text-white d-flex align-items-center justify-content-center" 
+                                        style="height: 200px;">
+                                        <i class="bi bi-image fs-1"></i>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="card-body">
+                                    <h5 class="card-title fw-bold"><?php echo htmlspecialchars($item['name']); ?></h5>
+                                    <p class="card-text text-muted"><?php echo !empty($item['description']) ? htmlspecialchars($item['description']) : 'No description available'; ?></p>
+                                    <p class="card-text fw-bold text-warning">
+                                        RM <?php echo number_format($item['price_per_pax'], 2); ?>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <?php 
+                        endforeach;
+                    } else {
+                        echo '<div class="col-12 text-center"><p>No menu items available at the moment.</p></div>';
+                    }
+                } catch (Exception $e) {
+                    echo '<div class="col-12 text-center"><p>Unable to load menu items. Please try again later.</p></div>';
+                }
+                ?>
+            </div>
+            <div class="text-center mt-4">
+                <a href="menu.php" class="btn btn-outline-warning">View All Menu Items</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Testimonials -->
+    <div class="container py-5">
+        <h2 class="text-center mb-5">What Our Customers Say</h2>
         <div class="row g-4">
             <div class="col-md-4">
                 <div class="card h-100 border-0 shadow-sm">
                     <div class="card-body">
-                        <div class="mb-3 text-warning">
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="bi bi-star-fill text-warning me-1"></i>
+                            <i class="bi bi-star-fill text-warning me-1"></i>
+                            <i class="bi bi-star-fill text-warning me-1"></i>
+                            <i class="bi bi-star-fill text-warning me-1"></i>
+                            <i class="bi bi-star-fill text-warning"></i>
                         </div>
-                        <p class="card-text">"Makanan yang sangat sedap dan khidmat yang memuaskan. Akan menggunakan perkhidmatan mereka lagi!"</p>
-                        <p class="card-text"><small class="text-muted">- Sarah Ahmad</small></p>
+                        <p class="card-text">"The food was amazing! Everyone at our event loved it. Will definitely order again."</p>
+                        <p class="card-text text-muted mb-0">- Sarah A.</p>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="card h-100 border-0 shadow-sm">
                     <div class="card-body">
-                        <div class="mb-3 text-warning">
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="bi bi-star-fill text-warning me-1"></i>
+                            <i class="bi bi-star-fill text-warning me-1"></i>
+                            <i class="bi bi-star-fill text-warning me-1"></i>
+                            <i class="bi bi-star-fill text-warning me-1"></i>
+                            <i class="bi bi-star-fill text-warning"></i>
                         </div>
-                        <p class="card-text">"Perkhidmatan yang sangat profesional. Makanan sampai tepat pada masanya dan masih panas!"</p>
-                        <p class="card-text"><small class="text-muted">- Muhammad Azmi</small></p>
+                        <p class="card-text">"Great service and delicious food. The delivery was on time and everything was perfect."</p>
+                        <p class="card-text text-muted mb-0">- John B.</p>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="card h-100 border-0 shadow-sm">
                     <div class="card-body">
-                        <div class="mb-3 text-warning">
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-half"></i>
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="bi bi-star-fill text-warning me-1"></i>
+                            <i class="bi bi-star-fill text-warning me-1"></i>
+                            <i class="bi bi-star-fill text-warning me-1"></i>
+                            <i class="bi bi-star-fill text-warning me-1"></i>
+                            <i class="bi bi-star-half text-warning"></i>
                         </div>
-                        <p class="card-text">"Harga yang berpatutan untuk kualiti makanan yang sangat baik. Sangat mengesyorkan!"</p>
-                        <p class="card-text"><small class="text-muted">- Nurul Huda</small></p>
+                        <p class="card-text">"Excellent catering service. The food was fresh and the staff was very professional."</p>
+                        <p class="card-text text-muted mb-0">- Maria C.</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</section>
 
-<!-- Call to Action -->
-<section class="py-5">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-10">
-                <div class="bg-warning rounded-3 p-5 text-center">
-                    <h2 class="fw-bold mb-3">Buat Tempahan Sekarang!</h2>
-                    <p class="lead mb-4">Dapatkan pengalaman katering yang terbaik untuk majlis anda.</p>
-                    <?php if (!$is_logged_in): ?>
-                        <a href="<?php echo get_public_url('register.php'); ?>" class="btn btn-dark btn-lg px-5">Daftar & Tempah</a>
-                    <?php else: ?>
-                        <a href="<?php echo get_public_url('order.php'); ?>" class="btn btn-dark btn-lg px-5">Buat Tempahan</a>
-                    <?php endif; ?>
-                </div>
-            </div>
+    <!-- Call to Action -->
+    <div class="bg-warning py-5">
+        <div class="container text-center">
+            <h2 class="text-white mb-4">Ready to Order?</h2>
+            <p class="text-white mb-4">Let us cater your next event with our delicious menu options.</p>
+            <a href="menu.php" class="btn btn-light btn-lg">Order Now</a>
         </div>
     </div>
-</section>
+</div>
 
 <?php require_once __DIR__ . '/../src/includes/footer.php'; ?> 

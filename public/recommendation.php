@@ -17,37 +17,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['filter'])) {
     $serving_method = $_POST['serving_method'] ?? '';
     $event_type = $_POST['event_type'] ?? '';
 
-    // Fetch menu items based on constraints
-    $stmt = $pdo->prepare("
+    // Debug logging
+    error_log("Budget: $budget");
+    error_log("Meal Preference: $meal_preference");
+    error_log("Pax: $pax");
+    error_log("Serving Method: $serving_method");
+    error_log("Event Type: $event_type");
+
+    // Build base SQL query
+    $sql = "
         SELECT mi.*, mi.price_per_pax as price,
                COUNT(DISTINCT oi.order_id) as popularity
         FROM menu_items mi
         LEFT JOIN order_items oi ON mi.item_id = oi.item_id
         WHERE mi.is_available = 1
-        AND mi.price_per_pax <= ?
-        AND mi.serving_methods LIKE ?
-        AND mi.event_types LIKE ?
-        AND mi.min_pax <= ?
-        AND mi.max_pax >= ?
-        " . ($meal_preference ? "AND mi.category LIKE ?" : "") . "
-        GROUP BY mi.item_id
-        ORDER BY popularity DESC
-        LIMIT 8
-    ");
-
+        AND mi.price_per_pax <= :budget
+        AND mi.serving_methods LIKE :serving_method
+        AND mi.event_types LIKE :event_type
+        AND mi.min_pax <= :pax
+        AND mi.max_pax >= :pax
+    ";
+    
+    // Initialize parameters array
     $params = [
-        $budget,
-        "%$serving_method%",
-        "%$event_type%",
-        $pax,
-        $pax
+        ':budget' => $budget,
+        ':serving_method' => "%$serving_method%",
+        ':event_type' => "%$event_type%",
+        ':pax' => $pax
     ];
-    if ($meal_preference) {
-        $params[] = "%$meal_preference%";
+    
+    // Add meal preference if specified
+    if (!empty($meal_preference)) {
+        $sql .= " AND mi.category LIKE :meal_preference";
+        $params[':meal_preference'] = "%$meal_preference%";
     }
-
-    $stmt->execute($params);
-    $filtered_recommendations = $stmt->fetchAll();
+    
+    // Add final parts of query
+    $sql .= " GROUP BY mi.item_id ORDER BY popularity DESC LIMIT 8";
+    
+    // Debug logging
+    error_log("SQL Query: $sql");
+    error_log("Parameters: " . print_r($params, true));
+    
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $filtered_recommendations = $stmt->fetchAll();
+    } catch (PDOException $e) {
+        error_log("PDO Error: " . $e->getMessage());
+        error_log("SQL Query: $sql");
+        error_log("Parameters: " . print_r($params, true));
+        throw $e;
+    }
 }
 
 // Fetch user's order history
@@ -71,22 +92,43 @@ $categories = array_unique(array_column($frequently_ordered, 'category'));
 // Fetch recommended items from same categories
 $recommended_items = [];
 if (!empty($categories)) {
-    $placeholders = str_repeat('?,', count($categories) - 1) . '?';
+    // Create placeholders for each category
+    $placeholders = array_map(function($index) {
+        return ":category$index";
+    }, array_keys($categories));
+    
     $sql = "
         SELECT mi.*, mi.price_per_pax as price,
                COUNT(DISTINCT oi.order_id) as popularity
         FROM menu_items mi
         LEFT JOIN order_items oi ON mi.item_id = oi.item_id
-        WHERE mi.category IN ($placeholders)
+        WHERE mi.category IN (" . implode(',', $placeholders) . ")
         AND mi.is_available = 1
         GROUP BY mi.item_id
         ORDER BY popularity DESC
         LIMIT 6
     ";
     
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($categories);
-    $recommended_items = $stmt->fetchAll();
+    // Create parameters array with named parameters
+    $params = [];
+    foreach ($categories as $index => $category) {
+        $params[":category$index"] = $category;
+    }
+    
+    // Debug logging
+    error_log("Recommended Items SQL: $sql");
+    error_log("Recommended Items Parameters: " . print_r($params, true));
+    
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $recommended_items = $stmt->fetchAll();
+    } catch (PDOException $e) {
+        error_log("PDO Error in Recommended Items: " . $e->getMessage());
+        error_log("SQL Query: $sql");
+        error_log("Parameters: " . print_r($params, true));
+        throw $e;
+    }
 }
 
 // Fetch popular items

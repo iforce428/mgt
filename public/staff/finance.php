@@ -7,16 +7,140 @@ require_staff_login();
 // Get date range
 $start_date = $_GET['start_date'] ?? date('Y-m-d', strtotime('-30 days'));
 $end_date = $_GET['end_date'] ?? date('Y-m-d');
+$selected_date = $_GET['profit_date'] ?? date('Y-m-d');
 
-// Fetch financial statistics
+// Initialize session storage for profit calculations if not exists
+if (!isset($_SESSION['profit_calculations'])) {
+    $_SESSION['profit_calculations'] = [
+        'tng_amount' => 0,
+        'cash_amount' => 0,
+        'employee_salary' => 0,
+        'overhead_cost' => 0,
+        'raw_materials_cost' => 0,
+        'total_costs' => 0,
+        'gross_profit' => 0,
+        'net_profit' => 0
+    ];
+}
+
+// Handle profit calculation form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['calculate_profit'])) {
+    // Get the selected date from the form
+    $selected_date = $_POST['profit_date'] ?? date('Y-m-d');
+    
+    $_SESSION['profit_calculations'] = [
+        'tng_amount' => floatval($_POST['tng_amount'] ?? 0),
+        'cash_amount' => floatval($_POST['cash_amount'] ?? 0),
+        'employee_salary' => floatval($_POST['employee_salary'] ?? 0),
+        'overhead_cost' => floatval($_POST['overhead_cost'] ?? 0),
+        'raw_materials_cost' => floatval($_POST['raw_materials_cost'] ?? 0)
+    ];
+    
+    // Calculate totals
+    $_SESSION['profit_calculations']['total_costs'] = 
+        $_SESSION['profit_calculations']['employee_salary'] +
+        $_SESSION['profit_calculations']['overhead_cost'] +
+        $_SESSION['profit_calculations']['raw_materials_cost'];
+        
+    $_SESSION['profit_calculations']['gross_profit'] = 
+        $_SESSION['profit_calculations']['tng_amount'] +
+        $_SESSION['profit_calculations']['cash_amount'];
+        
+    $_SESSION['profit_calculations']['net_profit'] = 
+        $_SESSION['profit_calculations']['gross_profit'] -
+        $_SESSION['profit_calculations']['total_costs'];
+
+    // Begin transaction
+    $pdo->beginTransaction();
+    
+    try {
+        // Delete existing records for this date
+        $stmt = $pdo->prepare("DELETE FROM financial_records WHERE record_date = ?");
+        $stmt->execute([$selected_date]);
+        
+        // Insert income records
+        if ($_SESSION['profit_calculations']['tng_amount'] > 0) {
+            $stmt = $pdo->prepare("
+                INSERT INTO financial_records 
+                (record_date, description, type, category, amount, recorded_by_staff_id)
+                VALUES (?, 'Touch N Go Income', 'Income', 'Touch N Go', ?, ?)
+            ");
+            $stmt->execute([
+                $selected_date,
+                $_SESSION['profit_calculations']['tng_amount'],
+                $_SESSION['user_id']
+            ]);
+        }
+        
+        if ($_SESSION['profit_calculations']['cash_amount'] > 0) {
+            $stmt = $pdo->prepare("
+                INSERT INTO financial_records 
+                (record_date, description, type, category, amount, recorded_by_staff_id)
+                VALUES (?, 'Cash Income', 'Income', 'Cash', ?, ?)
+            ");
+            $stmt->execute([
+                $selected_date,
+                $_SESSION['profit_calculations']['cash_amount'],
+                $_SESSION['user_id']
+            ]);
+        }
+        
+        // Insert expense records
+        if ($_SESSION['profit_calculations']['employee_salary'] > 0) {
+            $stmt = $pdo->prepare("
+                INSERT INTO financial_records 
+                (record_date, description, type, category, amount, recorded_by_staff_id)
+                VALUES (?, 'Employee Salary', 'Expense', 'Gaji Pekerja', ?, ?)
+            ");
+            $stmt->execute([
+                $selected_date,
+                $_SESSION['profit_calculations']['employee_salary'],
+                $_SESSION['user_id']
+            ]);
+        }
+        
+        if ($_SESSION['profit_calculations']['overhead_cost'] > 0) {
+            $stmt = $pdo->prepare("
+                INSERT INTO financial_records 
+                (record_date, description, type, category, amount, recorded_by_staff_id)
+                VALUES (?, 'Overhead Costs', 'Expense', 'Kos Overhead', ?, ?)
+            ");
+            $stmt->execute([
+                $selected_date,
+                $_SESSION['profit_calculations']['overhead_cost'],
+                $_SESSION['user_id']
+            ]);
+        }
+        
+        if ($_SESSION['profit_calculations']['raw_materials_cost'] > 0) {
+            $stmt = $pdo->prepare("
+                INSERT INTO financial_records 
+                (record_date, description, type, category, amount, recorded_by_staff_id)
+                VALUES (?, 'Raw Materials Cost', 'Expense', 'Kos Bahan Mentah', ?, ?)
+            ");
+            $stmt->execute([
+                $selected_date,
+                $_SESSION['profit_calculations']['raw_materials_cost'],
+                $_SESSION['user_id']
+            ]);
+        }
+        
+        $pdo->commit();
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        error_log("Error saving financial records: " . $e->getMessage());
+    }
+}
+
+// Fetch financial statistics for the date range
 $stmt = $pdo->prepare("
     SELECT 
         COUNT(*) as total_orders,
         SUM(total_amount) as total_revenue,
-        COUNT(*) as cash_orders,
-        0 as online_orders,
-        SUM(total_amount) as cash_revenue,
-        0 as online_revenue
+        COUNT(CASE WHEN delivery_option = 'Cash' THEN 1 END) as cash_orders,
+        COUNT(CASE WHEN delivery_option = 'Online Banking' THEN 1 END) as online_orders,
+        SUM(CASE WHEN delivery_option = 'Cash' THEN total_amount ELSE 0 END) as cash_revenue,
+        SUM(CASE WHEN delivery_option = 'Online Banking' THEN total_amount ELSE 0 END) as online_revenue
     FROM orders
     WHERE DATE(placed_at) BETWEEN ? AND ?
     AND status != 'Cancelled'
@@ -56,223 +180,240 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$start_date, $end_date]);
 $category_revenue = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch profit data for selected date
+$stmt = $pdo->prepare("
+    SELECT 
+        DATE(o.placed_at) as date,
+        SUM(CASE WHEN delivery_option = 'Online Banking' THEN total_amount ELSE 0 END) as tng_amount,
+        SUM(CASE WHEN delivery_option = 'Cash' THEN total_amount ELSE 0 END) as cash_amount,
+        COUNT(DISTINCT o.order_id) as total_orders,
+        SUM(oi.quantity) as total_items,
+        SUM(oi.quantity * oi.price_at_order) as total_revenue
+    FROM orders o
+    LEFT JOIN order_items oi ON o.order_id = oi.order_id
+    WHERE DATE(o.placed_at) = ?
+    AND o.status != 'Cancelled'
+    GROUP BY DATE(o.placed_at)
+");
+$stmt->execute([$selected_date]);
+$profit_data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Update session with fetched amounts if not manually entered
+if (!isset($_POST['calculate_profit']) && $profit_data) {
+    $_SESSION['profit_calculations']['tng_amount'] = floatval($profit_data['tng_amount'] ?? 0);
+    $_SESSION['profit_calculations']['cash_amount'] = floatval($profit_data['cash_amount'] ?? 0);
+    $_SESSION['profit_calculations']['gross_profit'] = 
+        $_SESSION['profit_calculations']['tng_amount'] + 
+        $_SESSION['profit_calculations']['cash_amount'];
+    $_SESSION['profit_calculations']['net_profit'] = 
+        $_SESSION['profit_calculations']['gross_profit'] - 
+        $_SESSION['profit_calculations']['total_costs'];
+}
+
+// Get menu items sold on selected date
+$stmt = $pdo->prepare("
+    SELECT 
+        mi.name as menu_name,
+        SUM(oi.quantity) as quantity,
+        SUM(oi.quantity * oi.price_at_order) as total_amount
+    FROM order_items oi
+    JOIN menu_items mi ON oi.item_id = mi.item_id
+    JOIN orders o ON oi.order_id = o.order_id
+    WHERE DATE(o.placed_at) = ?
+    AND o.status != 'Cancelled'
+    GROUP BY mi.item_id, mi.name
+    ORDER BY mi.name
+");
+$stmt->execute([$selected_date]);
+$menu_items_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get selected date from form or use today's date
+$selected_date = $_POST['profit_date'] ?? date('Y-m-d');
+
+// Fetch financial records for the selected date
+$stmt = $pdo->prepare("
+    SELECT * FROM financial_records 
+    WHERE record_date = ?
+    ORDER BY type DESC, category ASC
+");
+$stmt->execute([$selected_date]);
+$financial_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Calculate totals from records
+$total_income = 0;
+$total_expenses = 0;
+foreach ($financial_records as $record) {
+    if ($record['type'] === 'Income') {
+        $total_income += $record['amount'];
+    } else {
+        $total_expenses += $record['amount'];
+    }
+}
+$net_profit = $total_income - $total_expenses;
 ?>
 
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 fw-bold mb-0">Laporan Kewangan</h1>
-        
-        <!-- Date Range Filter -->
-        <form class="d-flex gap-2">
-            <input type="date" 
-                   class="form-control" 
-                   name="start_date" 
-                   value="<?php echo $start_date; ?>">
-            <input type="date" 
-                   class="form-control" 
-                   name="end_date" 
-                   value="<?php echo $end_date; ?>">
-            <button type="submit" class="btn btn-warning">
-                <i class="bi bi-filter"></i> Tapis
-            </button>
-        </form>
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Kewangan</h1>
+    
+    <!-- Date Selection Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="post" class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <label for="profit_date" class="form-label">Pilih Tarikh:</label>
+                    <input type="date" class="form-control" id="profit_date" name="profit_date" 
+                           value="<?= htmlspecialchars($selected_date) ?>" required>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary mt-4">Papar</button>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-6 col-lg-3">
-            <div class="card shadow-sm h-100">
+    <!-- Financial Summary -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-success text-white mb-4">
                 <div class="card-body">
-                    <h6 class="card-subtitle text-muted mb-2">Jumlah Pesanan</h6>
-                    <h2 class="card-title mb-0"><?php echo number_format($stats['total_orders']); ?></h2>
+                    Jumlah Pendapatan
+                    <h4>RM <?= number_format($total_income, 2) ?></h4>
                 </div>
             </div>
         </div>
-        
-        <div class="col-md-6 col-lg-3">
-            <div class="card shadow-sm h-100">
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-danger text-white mb-4">
                 <div class="card-body">
-                    <h6 class="card-subtitle text-muted mb-2">Jumlah Pendapatan</h6>
-                    <h2 class="card-title mb-0">
-                        RM <?php echo number_format($stats['total_revenue'], 2); ?>
-                    </h2>
+                    Jumlah Perbelanjaan
+                    <h4>RM <?= number_format($total_expenses, 2) ?></h4>
                 </div>
             </div>
         </div>
-        
-        <div class="col-md-6 col-lg-3">
-            <div class="card shadow-sm h-100">
+        <div class="col-xl-3 col-md-6">
+            <div class="card <?= $net_profit >= 0 ? 'bg-primary' : 'bg-danger' ?> text-white mb-4">
                 <div class="card-body">
-                    <h6 class="card-subtitle text-muted mb-2">Pendapatan Tunai</h6>
-                    <h2 class="card-title mb-0">
-                        RM <?php echo number_format($stats['cash_revenue'], 2); ?>
-                    </h2>
-                    <small class="text-muted">
-                        <?php echo number_format($stats['cash_orders']); ?> pesanan
-                    </small>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-6 col-lg-3">
-            <div class="card shadow-sm h-100">
-                <div class="card-body">
-                    <h6 class="card-subtitle text-muted mb-2">Pendapatan Online</h6>
-                    <h2 class="card-title mb-0">
-                        RM <?php echo number_format($stats['online_revenue'], 2); ?>
-                    </h2>
-                    <small class="text-muted">
-                        <?php echo number_format($stats['online_orders']); ?> pesanan
-                    </small>
+                    Untung Bersih
+                    <h4>RM <?= number_format($net_profit, 2) ?></h4>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row g-4">
-        <!-- Daily Revenue Chart -->
-        <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0">Pendapatan Harian</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="revenueChart" height="300"></canvas>
-                </div>
-            </div>
+    <!-- Profit Calculation Form -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-calculator me-1"></i>
+            Pengiraan Keuntungan
         </div>
-
-        <!-- Category Revenue -->
-        <div class="col-lg-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0">Pendapatan Mengikut Kategori</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th class="border-0">Kategori</th>
-                                    <th class="border-0 text-end">Jumlah</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($category_revenue as $category): ?>
-                                    <tr>
-                                        <td>
-                                            <?php echo escape($category['category']); ?>
-                                            <br>
-                                            <small class="text-muted">
-                                                <?php echo $category['order_count']; ?> pesanan
-                                            </small>
-                                        </td>
-                                        <td class="text-end">
-                                            <strong class="text-warning">
-                                                RM <?php echo number_format($category['revenue'], 2); ?>
-                                            </strong>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                <input type="hidden" name="profit_date" value="<?= htmlspecialchars($selected_date) ?>">
+                
+                <div class="col-md-6">
+                    <h5>Pendapatan</h5>
+                    <div class="mb-3">
+                        <label for="tng_amount" class="form-label">Touch N Go</label>
+                        <input type="number" step="0.01" class="form-control" id="tng_amount" name="tng_amount" 
+                               value="<?= htmlspecialchars($_SESSION['profit_calculations']['tng_amount'] ?? '') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label for="cash_amount" class="form-label">Tunai</label>
+                        <input type="number" step="0.01" class="form-control" id="cash_amount" name="cash_amount"
+                               value="<?= htmlspecialchars($_SESSION['profit_calculations']['cash_amount'] ?? '') ?>">
                     </div>
                 </div>
-            </div>
+                
+                <div class="col-md-6">
+                    <h5>Perbelanjaan</h5>
+                    <div class="mb-3">
+                        <label for="employee_salary" class="form-label">Gaji Pekerja</label>
+                        <input type="number" step="0.01" class="form-control" id="employee_salary" name="employee_salary"
+                               value="<?= htmlspecialchars($_SESSION['profit_calculations']['employee_salary'] ?? '') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label for="overhead_cost" class="form-label">Kos Overhead</label>
+                        <input type="number" step="0.01" class="form-control" id="overhead_cost" name="overhead_cost"
+                               value="<?= htmlspecialchars($_SESSION['profit_calculations']['overhead_cost'] ?? '') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label for="raw_materials_cost" class="form-label">Kos Bahan Mentah</label>
+                        <input type="number" step="0.01" class="form-control" id="raw_materials_cost" name="raw_materials_cost"
+                               value="<?= htmlspecialchars($_SESSION['profit_calculations']['raw_materials_cost'] ?? '') ?>">
+                    </div>
+                </div>
+                
+                <div class="col-12">
+                    <button type="submit" name="calculate_profit" class="btn btn-primary">Kira & Simpan</button>
+                </div>
+            </form>
         </div>
     </div>
-</div>
 
-<!-- Profit Calculator -->
-<div class="card shadow-sm mt-4">
-    <div class="card-header bg-light">
-        <h5 class="card-title mb-0">Kiraan Keuntungan</h5>
-    </div>
-    <div class="card-body">
-        <form id="profitCalculatorForm" class="row">
-            <div class="col-md-6">
-                <div class="mb-3 d-flex justify-content-between align-items-center">
-                    <label class="form-label" style="width: 200px;">Jumlah Touch N Go:</label>
-                    <div class="input-group" style="width: 200px;">
-                        <span class="input-group-text">RM</span>
-                        <input type="number" class="form-control" id="touchNGoAmount" step="0.01" value="0.00">
-                    </div>
-                </div>
-                <div class="mb-3 d-flex justify-content-between align-items-center">
-                    <label class="form-label" style="width: 200px;">Jumlah Wang Tunai:</label>
-                    <div class="input-group" style="width: 200px;">
-                        <span class="input-group-text">RM</span>
-                        <input type="number" class="form-control" id="cashAmount" step="0.01" value="0.00">
-                    </div>
-                </div>
-                <div class="mb-3 d-flex justify-content-between align-items-center">
-                    <label class="form-label" style="width: 200px;">Gaji Pekerja:</label>
-                    <div class="input-group" style="width: 200px;">
-                        <span class="input-group-text">RM</span>
-                        <input type="number" class="form-control" id="salaryExpense" step="0.01" value="0.00">
-                    </div>
-                </div>
-                <div class="mb-3 d-flex justify-content-between align-items-center">
-                    <label class="form-label" style="width: 200px;">Kos Overhead:</label>
-                    <div class="input-group" style="width: 200px;">
-                        <span class="input-group-text">RM</span>
-                        <input type="number" class="form-control" id="overheadCost" step="0.01" value="0.00">
-                    </div>
-                </div>
-                <div class="mb-3 d-flex justify-content-between align-items-center">
-                    <label class="form-label" style="width: 200px;">Kos Bahan Mentah:</label>
-                    <div class="input-group" style="width: 200px;">
-                        <span class="input-group-text">RM</span>
-                        <input type="number" class="form-control" id="rawMaterialCost" step="0.01" value="0.00">
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <button type="button" class="btn btn-warning" onclick="calculateProfit()">
-                        Kira Keuntungan
-                    </button>
-                </div>
-                <div class="mb-3 d-flex justify-content-between align-items-center">
-                    <label class="form-label fw-bold" style="width: 200px;">Jumlah Keuntungan:</label>
-                    <div class="input-group" style="width: 200px;">
-                        <span class="input-group-text">RM</span>
-                        <input type="text" class="form-control fw-bold" id="totalProfit" readonly>
-                    </div>
-                </div>
-            </div>
-        </form>
+    <!-- Financial Records Table -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-table me-1"></i>
+            Rekod Kewangan (<?= date('d/m/Y', strtotime($selected_date)) ?>)
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Jenis</th>
+                        <th>Kategori</th>
+                        <th>Keterangan</th>
+                        <th>Jumlah (RM)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($financial_records as $record): ?>
+                    <tr class="<?= $record['type'] === 'Income' ? 'table-success' : 'table-danger' ?>">
+                        <td><?= $record['type'] === 'Income' ? 'Pendapatan' : 'Perbelanjaan' ?></td>
+                        <td><?= htmlspecialchars($record['category']) ?></td>
+                        <td><?= htmlspecialchars($record['description']) ?></td>
+                        <td class="text-end"><?= number_format($record['amount'], 2) ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($financial_records)): ?>
+                    <tr>
+                        <td colspan="4" class="text-center">Tiada rekod untuk tarikh ini</td>
+                    </tr>
+                    <?php endif; ?>
+                </tbody>
+                <tfoot>
+                    <tr class="table-primary">
+                        <th colspan="3" class="text-end">Untung Bersih:</th>
+                        <th class="text-end"><?= number_format($net_profit, 2) ?></th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// Prepare data for revenue chart
-const dates = <?php echo json_encode(array_column($daily_revenue, 'date')); ?>;
-const revenues = <?php echo json_encode(array_column($daily_revenue, 'revenue')); ?>;
-const orderCounts = <?php echo json_encode(array_column($daily_revenue, 'order_count')); ?>;
-
-// Create revenue chart
+// Revenue Chart
 const ctx = document.getElementById('revenueChart').getContext('2d');
 new Chart(ctx, {
     type: 'line',
     data: {
-        labels: dates,
+        labels: <?php echo json_encode(array_map(function($item) {
+            return date('d/m/Y', strtotime($item['date']));
+        }, $daily_revenue)); ?>,
         datasets: [{
-            label: 'Pendapatan (RM)',
-            data: revenues,
+            label: 'Pendapatan Harian',
+            data: <?php echo json_encode(array_map(function($item) {
+                return $item['revenue'];
+            }, $daily_revenue)); ?>,
             borderColor: '#ffc107',
-            backgroundColor: 'rgba(255, 193, 7, 0.1)',
-            tension: 0.4,
-            fill: true
+            tension: 0.1
         }]
     },
     options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false
-            }
-        },
         scales: {
             y: {
                 beginAtZero: true,
@@ -282,29 +423,18 @@ new Chart(ctx, {
                     }
                 }
             }
+        },
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'RM ' + context.raw.toLocaleString();
+                    }
+                }
+            }
         }
     }
 });
-
-function calculateProfit() {
-    const touchNGo = parseFloat(document.getElementById('touchNGoAmount').value) || 0;
-    const cash = parseFloat(document.getElementById('cashAmount').value) || 0;
-    const salary = parseFloat(document.getElementById('salaryExpense').value) || 0;
-    const overhead = parseFloat(document.getElementById('overheadCost').value) || 0;
-    const rawMaterial = parseFloat(document.getElementById('rawMaterialCost').value) || 0;
-
-    // Calculate total revenue
-    const totalRevenue = touchNGo + cash;
-
-    // Calculate total expenses
-    const totalExpenses = salary + overhead + rawMaterial;
-
-    // Calculate profit
-    const profit = totalRevenue - totalExpenses;
-
-    // Display the result
-    document.getElementById('totalProfit').value = profit.toFixed(2);
-}
 </script>
 
 <?php require_once __DIR__ . '/../../src/includes/footer.php'; ?> 

@@ -29,16 +29,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $cart_json = $_SESSION['cart'] ?? '{}';
 }
 
-$cart_items = json_decode($cart_json, true);
+// Decode cart data and validate
+$cart_items = json_decode($cart_json, true) ?? [];
+if (!is_array($cart_items)) {
+    $cart_items = [];
+}
 
+// Handle empty cart
 if (empty($cart_items)) {
-    header('Location: menu.php');
+    echo '<div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <div class="card shadow-sm">
+                    <div class="card-body py-5">
+                        <i class="bi bi-cart-x display-1 text-warning mb-4"></i>
+                        <h2 class="mb-3">Troli Anda Kosong</h2>
+                        <p class="text-muted mb-4">Anda belum memilih sebarang item untuk dipesan.</p>
+                        <a href="menu.php" class="btn btn-warning btn-lg">
+                            <i class="bi bi-arrow-left me-2"></i>Kembali ke Menu
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>';
+    require_once __DIR__ . '/../src/includes/footer.php';
     exit;
 }
 
 // Calculate total amount
 foreach ($cart_items as $item_id => $item) {
-    $total_amount += $item['price'] * $item['quantity'];
+    if (isset($item['price']) && isset($item['quantity'])) {
+        $total_amount += floatval($item['price']) * intval($item['quantity']);
+    }
 }
 
 // Handle form submission
@@ -143,10 +166,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_order'])) {
             
             // Clear cart data
             unset($_SESSION['cart_items']);
-            echo "<script>sessionStorage.removeItem('cart');</script>";
             
-            // Redirect to success page
-            header("Location: order_success.php?order_id=" . $order_id);
+            // Redirect to success page with JavaScript cleanup
+            echo '<script>
+                sessionStorage.removeItem("cart");
+                window.location.href = "order_success.php?order_id=' . $order_id . '";
+            </script>';
             exit;
 
         } else {
