@@ -1,7 +1,9 @@
 <?php 
+// Start output buffering
+ob_start();
+
 require_once __DIR__ . '/../../src/includes/functions.php';
 require_once __DIR__ . '/../../src/includes/db.php';
-require_once __DIR__ . '/../../src/includes/header.php';
 require_staff_login();
 
 // Get order ID from URL
@@ -16,7 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['status'])) {
         $stmt = $pdo->prepare("UPDATE orders SET status = ? WHERE order_id = ?");
         $stmt->execute([$new_status, $order_id]);
         
-        // Redirect to refresh the page
+        // Clear any existing output before redirect
+        ob_clean();
         header("Location: order_detail.php?id=" . $order_id);
         exit;
     }
@@ -33,6 +36,8 @@ $stmt->execute([$order_id]);
 $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$order) {
+    // Clear any existing output before redirect
+    ob_clean();
     header('Location: index.php');
     exit;
 }
@@ -46,6 +51,9 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$order_id]);
 $order_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Include header after all header operations
+require_once __DIR__ . '/../../src/includes/header.php';
 ?>
 
 <div class="container-fluid py-4">
