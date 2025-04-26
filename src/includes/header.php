@@ -156,12 +156,12 @@ function is_staff() {
                                     Hi <?php echo htmlspecialchars(strtok($user_name ?? '', " ")); ?>!
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                    <li>
+                                    <!-- <li>
                                         <a class="dropdown-item" href="<?php echo public_url('public/profile.php'); ?>">
                                             <i class="bi bi-person-circle me-2"></i>Profil
                                         </a>
-                                    </li>
-                                    <li><hr class="dropdown-divider"></li>
+                                    </li> -->
+                                    <!-- <li><hr class="dropdown-divider"></li> -->
                                     <li>
                                         <a class="dropdown-item text-danger" href="<?php echo public_url('logout.php'); ?>">
                                             <i class="bi bi-box-arrow-right me-2"></i>Log Keluar

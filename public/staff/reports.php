@@ -7,6 +7,33 @@ require_staff_login();
 $start_date = $_GET['start_date'] ?? date('Y-m-d', strtotime('-30 days'));
 $end_date = $_GET['end_date'] ?? date('Y-m-d');
 
+// Handle edit transaction
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_transaction'])) {
+    try {
+        $record_id = $_POST['record_id'];
+        $record_date = $_POST['record_date'];
+        $description = $_POST['description'];
+        $category = $_POST['category'];
+        $type = $_POST['type'];
+        $amount = $_POST['amount'];
+
+        $stmt = $pdo->prepare("
+            UPDATE financial_records 
+            SET record_date = ?, description = ?, category = ?, type = ?, amount = ?
+            WHERE record_id = ?
+        ");
+        $stmt->execute([$record_date, $description, $category, $type, $amount, $record_id]);
+
+        // Redirect back with success message
+        header("Location: reports.php?tab=profit&start_date=$start_date&end_date=$end_date&success=1");
+        exit;
+    } catch (PDOException $e) {
+        error_log("Error updating transaction: " . $e->getMessage());
+        header("Location: reports.php?tab=profit&start_date=$start_date&end_date=$end_date&error=1");
+        exit;
+    }
+}
+
 if (isset($_GET['download_report'])) {
     $report_type = $_GET['download_report'];
     $filename = '';
@@ -380,7 +407,23 @@ foreach ($dates as $date) {
                         ?>
                             <tr class="<?= $transaction['type'] === 'Income' ? 'table-success' : 'table-danger' ?>">
                                 <td><?= date('d/m/Y', strtotime($transaction['record_date'])) ?></td>
-                                <td><?= htmlspecialchars($transaction['description']) ?></td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <?= htmlspecialchars($transaction['description']) ?>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-primary ms-2 edit-transaction" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#editTransactionModal"
+                                                data-id="<?= $transaction['record_id'] ?>"
+                                                data-date="<?= $transaction['record_date'] ?>"
+                                                data-description="<?= htmlspecialchars($transaction['description']) ?>"
+                                                data-category="<?= htmlspecialchars($transaction['category']) ?>"
+                                                data-type="<?= $transaction['type'] ?>"
+                                                data-amount="<?= $transaction['amount'] ?>">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                    </div>
+                                </td>
                                 <td><?= htmlspecialchars($transaction['category']) ?></td>
                                 <td><?= $transaction['type'] === 'Income' ? 'Pendapatan' : 'Perbelanjaan' ?></td>
                                 <td class="text-end"><?= number_format($transaction['amount'], 2) ?></td>
@@ -402,6 +445,66 @@ foreach ($dates as $date) {
                         </tr>
                     </tfoot>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Transaction Modal -->
+    <div class="modal fade" id="editTransactionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Transaksi</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" name="edit_transaction" value="1">
+                        <input type="hidden" name="record_id" id="edit_record_id">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Tarikh:</label>
+                            <input type="date" class="form-control" name="record_date" id="edit_record_date" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Keterangan:</label>
+                            <input type="text" class="form-control" name="description" id="edit_description" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Kategori:</label>
+                            <select class="form-select" name="category" id="edit_category" required>
+                                <option value="Sales">Jualan</option>
+                                <option value="Deposit">Deposit</option>
+                                <option value="Refund">Bayaran Balik</option>
+                                <option value="Supplies">Bekalan</option>
+                                <option value="Salary">Gaji</option>
+                                <option value="Utilities">Utiliti</option>
+                                <option value="Rent">Sewa</option>
+                                <option value="Marketing">Pemasaran</option>
+                                <option value="Others">Lain-lain</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Jenis:</label>
+                            <select class="form-select" name="type" id="edit_type" required>
+                                <option value="Income">Pendapatan</option>
+                                <option value="Expense">Perbelanjaan</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Jumlah (RM):</label>
+                            <input type="number" step="0.01" min="0" class="form-control" name="amount" id="edit_amount" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary">Simpan</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -478,6 +581,65 @@ foreach ($dates as $date) {
             }
         });
     }
+
+    // Initialize edit transaction functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get the modal element
+        const editModal = document.getElementById('editTransactionModal');
+        
+        // Add event listeners to all edit buttons
+        document.querySelectorAll('.edit-transaction').forEach(button => {
+            button.addEventListener('click', function() {
+                // Get data from button attributes
+                const id = this.getAttribute('data-id');
+                const date = this.getAttribute('data-date');
+                const description = this.getAttribute('data-description');
+                const category = this.getAttribute('data-category');
+                const type = this.getAttribute('data-type');
+                const amount = this.getAttribute('data-amount');
+                
+                // Set values in modal form
+                document.getElementById('edit_record_id').value = id;
+                document.getElementById('edit_record_date').value = date;
+                document.getElementById('edit_description').value = description;
+                document.getElementById('edit_category').value = category;
+                document.getElementById('edit_type').value = type;
+                document.getElementById('edit_amount').value = amount;
+            });
+        });
+        
+        // Show success/error messages
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('success')) {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show';
+            alert.innerHTML = `
+                Transaksi berjaya dikemaskini!
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.card-body').insertBefore(alert, document.querySelector('.card-body').firstChild);
+            
+            // Auto-dismiss alert after 5 seconds
+            setTimeout(() => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }, 5000);
+        } else if (urlParams.get('error')) {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger alert-dismissible fade show';
+            alert.innerHTML = `
+                Ralat semasa mengemaskini transaksi. Sila cuba lagi.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.card-body').insertBefore(alert, document.querySelector('.card-body').firstChild);
+            
+            // Auto-dismiss alert after 5 seconds
+            setTimeout(() => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }, 5000);
+        }
+    });
     </script>
 
     <style media="print">
@@ -501,6 +663,27 @@ foreach ($dates as $date) {
         max-height: 250px !important;
         width: auto !important;
         page-break-inside: avoid;
+    }
+    </style>
+    <style>
+    .edit-transaction {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+        border-radius: 0.2rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    .edit-transaction i {
+        font-size: 0.875rem;
+    }
+    .table td {
+        vertical-align: middle;
+    }
+    @media print {
+        .edit-transaction {
+            display: none !important;
+        }
     }
     </style>
     <?php endif; ?>

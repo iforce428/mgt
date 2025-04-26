@@ -90,7 +90,7 @@ $popular_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <div class="card-body">
                     <h6 class="card-subtitle text-muted mb-2">Jumlah Pendapatan</h6>
                     <h2 class="card-title mb-0">
-                        RM <?php echo number_format($stats['total_revenue'], 2); ?>
+                        RM <?php echo number_format($stats['total_revenue'] ?? 0, 2); ?>
                     </h2>
                 </div>
             </div>
@@ -187,11 +187,11 @@ $popular_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </table>
                     </div>
                 </div>
-                <div class="card-footer bg-light">
+                <!-- <div class="card-footer bg-light">
                     <a href="orders.php" class="btn btn-link text-warning p-0">
                         Lihat Semua Pesanan
                     </a>
-                </div>
+                </div> -->
             </div>
         </div>
 

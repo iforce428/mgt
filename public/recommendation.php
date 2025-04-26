@@ -24,45 +24,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['filter'])) {
     error_log("Serving Method: $serving_method");
     error_log("Event Type: $event_type");
 
-    // Build base SQL query
-    $sql = "
-        SELECT mi.*, mi.price_per_pax as price,
-               COUNT(DISTINCT oi.order_id) as popularity
-        FROM menu_items mi
-        LEFT JOIN order_items oi ON mi.item_id = oi.item_id
-        WHERE mi.is_available = 1
-        AND mi.price_per_pax <= :budget
-        AND mi.serving_methods LIKE :serving_method
-        AND mi.event_types LIKE :event_type
-        AND mi.min_pax <= :pax
-        AND mi.max_pax >= :pax
-    ";
-    
-    // Initialize parameters array
-    $params = [
-        ':budget' => $budget,
-        ':serving_method' => "%$serving_method%",
-        ':event_type' => "%$event_type%",
-        ':pax' => $pax
-    ];
-    
-    // Add meal preference if specified
-    if (!empty($meal_preference)) {
-        $sql .= " AND mi.category LIKE :meal_preference";
-        $params[':meal_preference'] = "%$meal_preference%";
-    }
-    
-    // Add final parts of query
-    $sql .= " GROUP BY mi.item_id ORDER BY popularity DESC LIMIT 8";
-    
-    // Debug logging
-    error_log("SQL Query: $sql");
-    error_log("Parameters: " . print_r($params, true));
-    
     try {
+        // Step 1: First filter by budget (primary constraint)
+        $sql = "
+            WITH budget_filtered AS (
+                SELECT mi.*, mi.price_per_pax as price,
+                       COUNT(DISTINCT oi.order_id) as order_count
+                FROM menu_items mi
+                LEFT JOIN order_items oi ON mi.item_id = oi.item_id
+                WHERE mi.is_available = 1
+                AND mi.price_per_pax <= ?
+                GROUP BY mi.item_id
+            ),
+            ranked_items AS (
+                SELECT *,
+                    CASE 
+                        WHEN ? != '' AND category LIKE ? THEN 3
+                        WHEN ? != '' AND subcategory LIKE ? THEN 2
+                        ELSE 1
+                    END as preference_score,
+                    CASE 
+                        WHEN serving_methods LIKE ? THEN 1
+                        ELSE 0
+                    END as serving_score,
+                    CASE 
+                        WHEN event_types LIKE ? OR event_types = 'All' THEN 1
+                        ELSE 0
+                    END as event_score,
+                    CASE 
+                        WHEN min_pax <= ? AND max_pax >= ? THEN 1
+                        ELSE 0
+                    END as pax_score
+                FROM budget_filtered
+            )
+            SELECT *,
+                (preference_score + serving_score + event_score + pax_score + COALESCE(order_count, 0)) as total_score
+            FROM ranked_items
+            ORDER BY total_score DESC, price ASC
+            LIMIT 8
+        ";
+
+        $params = [
+            $budget,  // Budget constraint
+            $meal_preference, // For category check
+            "%$meal_preference%", // For category LIKE
+            $meal_preference, // For subcategory check
+            "%$meal_preference%", // For subcategory LIKE
+            "%$serving_method%", // Serving method
+            "%$event_type%", // Event type
+            $pax, // Min pax
+            $pax  // Max pax
+        ];
+
+        // Debug logging
+        error_log("Recommendation SQL: $sql");
+        error_log("Parameters: " . print_r($params, true));
+
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $filtered_recommendations = $stmt->fetchAll();
+
+        // Add debug information about scoring
+        foreach ($filtered_recommendations as &$item) {
+            $score_explanation = [
+                'name' => $item['name'],
+                'price' => $item['price'],
+                'total_score' => $item['total_score'],
+                'preference_score' => $item['preference_score'],
+                'serving_score' => $item['serving_score'],
+                'event_score' => $item['event_score'],
+                'pax_score' => $item['pax_score'],
+                'order_count' => $item['order_count']
+            ];
+            error_log("Item scoring: " . print_r($score_explanation, true));
+        }
+
     } catch (PDOException $e) {
         error_log("PDO Error: " . $e->getMessage());
         error_log("SQL Query: $sql");
@@ -83,8 +119,16 @@ $stmt = $pdo->prepare("
     ORDER BY order_count DESC, total_quantity DESC
     LIMIT 5
 ");
-$stmt->execute([$_SESSION['user_id']]);
-$frequently_ordered = $stmt->fetchAll();
+
+// Check if user_id exists in session
+if (isset($_SESSION['user_id'])) {
+    $stmt->execute([$_SESSION['user_id']]);
+    $frequently_ordered = $stmt->fetchAll();
+} else {
+    // If user_id is not set, return empty array
+    $frequently_ordered = [];
+    error_log("Warning: user_id not found in session");
+}
 
 // Get categories from frequently ordered items
 $categories = array_unique(array_column($frequently_ordered, 'category'));
