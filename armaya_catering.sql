@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 23, 2025 at 09:56 PM
+-- Generation Time: Apr 25, 2025 at 03:33 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -68,7 +68,6 @@ CREATE TABLE `menu_items` (
 --
 
 INSERT INTO `menu_items` (`item_id`, `name`, `description`, `image_url`, `price_per_pax`, `min_pax`, `max_pax`, `serving_methods`, `event_types`, `meal_tags`, `is_available`, `created_at`, `updated_at`, `category`, `subcategory`) VALUES
-(58, 'Nasi Lemak', 'nasi berlemak', NULL, 3.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:59:55', 'Nasi', 'Tradisional'),
 (59, 'Nasi Goreng', NULL, NULL, 3.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Nasi', 'Goreng'),
 (60, 'Nasi Putih', NULL, NULL, 1.50, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Nasi', 'Tradisional'),
 (61, 'Nasi Ayam Hainan', NULL, NULL, 5.00, 1, 500, 'Buffet,Packed,Social', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Nasi', 'Ayam'),
@@ -83,17 +82,17 @@ INSERT INTO `menu_items` (`item_id`, `name`, `description`, `image_url`, `price_
 (70, 'Sambal Goreng', NULL, NULL, 3.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Lauk Pauk', 'Seafood'),
 (71, 'Sambal Telur', NULL, NULL, 3.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Lauk Pauk', 'Telur'),
 (72, 'Telur Goreng', NULL, NULL, 1.50, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Lauk Pauk', 'Telur'),
-(73, 'Sambal Sardin', NULL, NULL, 3.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Lauk Pauk', 'Ikan'),
+(73, 'Sambal Sardin', '', NULL, 4.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', '', 1, '2025-04-23 17:55:52', '2025-04-24 03:16:38', 'Lauk Pauk', 'Ikan'),
 (74, 'Sambal Ayam', NULL, NULL, 5.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Lauk Pauk', 'Ayam'),
 (75, 'Kari Ayam', NULL, NULL, 5.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Lauk Pauk', 'Ayam'),
 (76, 'Ayam Masak Lemak', NULL, NULL, 5.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Lauk Pauk', 'Ayam'),
-(77, 'Ayam Goreng', NULL, NULL, 4.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Lauk Pauk', 'Ayam'),
+(77, 'Ayam Goreng', '', NULL, 5.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', '', 1, '2025-04-23 17:55:52', '2025-04-24 03:16:18', 'Lauk Pauk', 'Ayam'),
 (78, 'Ayam Buttermilk', NULL, NULL, 5.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Lauk Pauk', 'Ayam'),
 (79, 'Sayur Campur', NULL, NULL, 3.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Sayur', 'Campur'),
 (80, 'Kangkung Goreng Belacan', NULL, NULL, 3.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Sayur', 'Goreng'),
 (81, 'Terung Goreng Berlada', NULL, NULL, 3.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Sayur', 'Goreng'),
 (82, 'Air Teh O', NULL, NULL, 1.50, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Air', 'Teh'),
-(83, 'Air Sirap', NULL, NULL, 1.50, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Air', 'Sirap'),
+(83, 'Air Sirap', '', 'http://localhost/mgt/uploads/680b68d71717a.png', 1.60, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', '', 1, '2025-04-23 17:55:52', '2025-04-25 10:49:59', 'Air', 'Sirap'),
 (84, 'Air Teh Tarik', NULL, NULL, 1.50, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Air', 'Teh'),
 (85, 'Nasi Lemak + Sambal Kerang', NULL, NULL, 5.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Package', 'Nasi Lemak'),
 (86, 'Nasi Lemak + Sambal Telur', NULL, NULL, 5.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Package', 'Nasi Lemak'),
@@ -116,7 +115,9 @@ INSERT INTO `menu_items` (`item_id`, `name`, `description`, `image_url`, `price_
 (103, 'Nasi Putih + Kari Ayam + Sayur Campur', NULL, NULL, 7.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Package', 'Nasi Putih Set'),
 (104, 'Nasi Putih + Ayam Masak Lemak + Sayur Campur', NULL, NULL, 7.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Package', 'Nasi Putih Set'),
 (105, 'Nasi Putih + Ayam Goreng + Sayur Campur', NULL, NULL, 7.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Package', 'Nasi Putih Set'),
-(106, 'Nasi Putih + Ayam Buttermilk', NULL, NULL, 6.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Package', 'Nasi Putih Set');
+(106, 'Nasi Putih + Ayam Buttermilk', NULL, NULL, 6.00, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', NULL, 1, '2025-04-23 17:55:52', '2025-04-23 17:55:52', 'Package', 'Nasi Putih Set'),
+(107, 'Air Sirap', '', NULL, 1.60, 1, 1000, 'Buffet,Packed,Social,Corporate', 'All', '', 1, '2025-04-24 03:12:59', '2025-04-24 03:12:59', 'Air', 'Sirap'),
+(111, 'test', 'test', NULL, 1.70, 1, 1000, 'Corporate', 'Wedding', 'Spicy', 1, '2025-04-24 03:20:51', '2025-04-24 03:20:51', 'Lauk Pauk', 'Ayam');
 
 -- --------------------------------------------------------
 
@@ -143,17 +144,6 @@ CREATE TABLE `orders` (
   `staff_notes` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `orders`
---
-
-INSERT INTO `orders` (`order_id`, `customer_id`, `delivery_date`, `delivery_time`, `order_date`, `total_pax`, `delivery_option`, `delivery_location`, `serving_method`, `event_type`, `budget_per_pax`, `total_amount`, `status`, `placed_at`, `updated_at`, `staff_notes`) VALUES
-(4, 4, '2025-04-25', '15:12:00', '0000-00-00 00:00:00', 10, '', 'asdf', '', 'Corporate', 0.00, 25.00, 'Pending', '2025-04-23 19:14:47', '2025-04-23 19:14:47', 'asdfd'),
-(5, 4, '2025-04-26', '15:15:00', '0000-00-00 00:00:00', 10, '', 'asdf', '', 'Corporate', 0.00, 25.00, 'Pending', '2025-04-23 19:15:33', '2025-04-23 19:15:33', 'asdf'),
-(6, 4, '2025-04-25', '15:18:00', '0000-00-00 00:00:00', 10, '', 'asdf', '', 'Corporate', 0.00, 25.00, 'Pending', '2025-04-23 19:17:32', '2025-04-23 19:17:32', 'adsfadf'),
-(7, 4, '2025-04-25', '15:18:00', '0000-00-00 00:00:00', 10, '', 'adsf', '', 'Corporate', 0.00, 25.00, 'Pending', '2025-04-23 19:18:48', '2025-04-23 19:18:48', 'adfadsf'),
-(8, 4, '2025-04-24', '15:23:00', '0000-00-00 00:00:00', 10, '', 'adf', '', 'Corporate', 0.00, 25.00, 'Pending', '2025-04-23 19:20:53', '2025-04-23 19:20:53', 'asdf');
-
 -- --------------------------------------------------------
 
 --
@@ -167,27 +157,6 @@ CREATE TABLE `order_items` (
   `quantity` int(11) NOT NULL,
   `price_at_order` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `order_items`
---
-
-INSERT INTO `order_items` (`order_item_id`, `order_id`, `item_id`, `quantity`, `price_at_order`) VALUES
-(1, 4, 77, 4, 4.00),
-(2, 4, 82, 2, 1.50),
-(3, 4, 83, 4, 1.50),
-(4, 5, 77, 4, 4.00),
-(5, 5, 82, 2, 1.50),
-(6, 5, 83, 4, 1.50),
-(7, 6, 77, 4, 4.00),
-(8, 6, 82, 2, 1.50),
-(9, 6, 83, 4, 1.50),
-(10, 7, 77, 4, 4.00),
-(11, 7, 82, 2, 1.50),
-(12, 7, 83, 4, 1.50),
-(13, 8, 77, 4, 4.00),
-(14, 8, 82, 2, 1.50),
-(15, 8, 83, 4, 1.50);
 
 -- --------------------------------------------------------
 
@@ -204,13 +173,6 @@ CREATE TABLE `users` (
   `role` enum('Admin','Staff','Customer') NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `users`
---
-
-INSERT INTO `users` (`user_id`, `username`, `password_hash`, `full_name`, `phone_number`, `role`, `created_at`) VALUES
-(4, 'webtest', '$2y$10$sDIANUhf.ct.lLLcjYHe2.8nL7OomQ9skP2agk1A36fvDn7T01Q6q', 'web bin test', '0193254004', 'Customer', '2025-04-23 18:23:01');
 
 --
 -- Indexes for dumped tables
@@ -260,31 +222,31 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `financial_records`
 --
 ALTER TABLE `financial_records`
-  MODIFY `record_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `record_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `menu_items`
 --
 ALTER TABLE `menu_items`
-  MODIFY `item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=107;
+  MODIFY `item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=112;
 
 --
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `order_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `order_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- Constraints for dumped tables
